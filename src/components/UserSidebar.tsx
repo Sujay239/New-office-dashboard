@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   Home,
   CheckSquare,
@@ -12,12 +13,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  MoreVertical,
+  Sun,
+  Moon,
+  Timer,
 } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
 
-// Asset Paths
+// --- Configuration ---
 const logo = "/logo.png";
-const mobileLogo = "/mobile-logo.png"; // We can use this for the collapsed state if you prefer
+const mobileLogo = "/mobile-logo.png";
 
 type NavItem = {
   label: string;
@@ -46,20 +50,67 @@ const UserSidebar: React.FC = () => {
   const [expanded, setExpanded] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // --- NEW: Attendance State Logic ---
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+
+  // Sync with localStorage on mount (and periodically to stay in sync with Attendance Page)
+  useEffect(() => {
+    const checkStatus = () => {
+      const status = localStorage.getItem("attendance_status");
+      setIsCheckedIn(status === "clocked_in");
+    };
+
+    checkStatus(); // Initial check
+
+    // Listen for storage events (if changed in another tab)
+    window.addEventListener("storage", checkStatus);
+
+    // Optional: Poll every second to catch changes made on Attendance Page within same tab
+    const interval = setInterval(checkStatus, 1000);
+
+    return () => {
+      window.removeEventListener("storage", checkStatus);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleClockAction = () => {
+    if (!isCheckedIn) {
+      // Clock In
+      const now = Date.now();
+      localStorage.setItem("attendance_status", "clocked_in");
+      localStorage.setItem("attendance_start_time", now.toString());
+      setIsCheckedIn(true);
+    } else {
+      // Clock Out
+      localStorage.removeItem("attendance_status");
+      localStorage.removeItem("attendance_start_time");
+      setIsCheckedIn(false);
+      // Optional: Add alert or toast here
+    }
+  };
+  // -----------------------------------
+
   // Auto-close mobile menu on resize
   useEffect(() => {
-    const handleResize = () =>
-      window.innerWidth >= 1024 && setMobileOpen(false);
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileOpen(false);
+      }
+    };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const isExpandedVisual = mobileOpen ? true : expanded;
+
   return (
     <>
       {/* --- Mobile Trigger Button (Fixed) --- */}
+      {/* --- Mobile Trigger Button (Fixed - Moved to Right) --- */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-slate-800 text-green-400 shadow-lg shadow-green-500/20 border border-slate-700"
+        className="lg:hidden fixed top-4 right-4 z-50 p-2 rounded-lg bg-slate-800 text-green-400 shadow-lg shadow-green-500/20 border border-slate-700"
       >
         <Menu size={24} />
       </button>
@@ -67,7 +118,7 @@ const UserSidebar: React.FC = () => {
       {/* --- Mobile Overlay --- */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden pointer-events-auto"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -75,9 +126,9 @@ const UserSidebar: React.FC = () => {
       {/* --- Main Sidebar --- */}
       <aside
         className={`
-          fixed lg:static top-0 left-0 z-50 h-screen bg-slate-950 border-r border-slate-800/50
+          fixed lg:static top-0 left-0 z-50 h-screen bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800/50
           transition-all duration-300 ease-in-out flex flex-col
-          ${expanded ? "w-72" : "w-20"}
+          ${isExpandedVisual ? "w-72" : "w-20"}
           ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
@@ -85,156 +136,247 @@ const UserSidebar: React.FC = () => {
         <div className="h-20 flex items-center px-4 relative">
           <div className="flex items-center gap-3 overflow-hidden w-full">
             <img
-              src={expanded ? logo : mobileLogo}
+              src={isExpandedVisual ? logo : mobileLogo}
               alt="Logo"
-              className={`object-contain transition-all duration-300 ${expanded ? "w-full h-10" : "w-8 h-8 mx-auto"}`}
+              className={`object-contain transition-all duration-300 ${
+                isExpandedVisual ? "w-full h-10" : "w-8 h-8 mx-auto"
+              }`}
             />
-
-
           </div>
 
-          {/* Desktop Toggle Button */}
           <button
             onClick={() => setExpanded(!expanded)}
-            className="hidden lg:flex absolute -right-3 top-8 p-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-green-500 transition-all shadow-xl z-50"
+            className="hidden lg:flex absolute -right-3 top-8 p-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-green-500 transition-all shadow-xl z-50 cursor-pointer"
           >
             {expanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
           </button>
         </div>
 
         {/* 2. Navigation Items */}
-        <nav className="flex-1 flex flex-col gap-2 px-3 py-6 overflow-y">
+        <nav className="flex-1 flex flex-col gap-2 px-3 py-6 overflow-y-auto overflow-x-hidden scrollbar-hide">
           {navItems.map((item) => (
-            <SidebarItem
+            <TooltipWrapper
               key={item.to}
-              item={item}
-              expanded={expanded}
-              setMobileOpen={setMobileOpen}
-            />
+              label={item.label}
+              expanded={isExpandedVisual}
+            >
+              <NavLink
+                to={item.to}
+                end={item.to === "/user"}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) => `
+                  group relative flex items-center p-3 rounded-xl transition-all duration-300 ease-in-out hover:scale-105 hover:ml-2 hover:font-bold
+                  ${
+                    isActive
+                      ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-transparent"
+                      : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200"
+                  }
+                  ${isExpandedVisual ? "" : "justify-center"}
+                `}
+              >
+                <div className="transition-transform duration-300 group-hover:scale-110">
+                  {item.icon}
+                </div>
+                <span
+                  className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
+                    isExpandedVisual
+                      ? "w-40 ml-3 opacity-100"
+                      : "w-0 opacity-0 hidden"
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </NavLink>
+            </TooltipWrapper>
           ))}
         </nav>
 
         {/* 3. Footer Actions */}
-        <div className="p-3 border-t border-slate-800 bg-slate-900/50">
+        <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex flex-col gap-2 mb-4">
-            {/* Check In Button (Glowing Green) */}
-            <button
-              className={`
-              flex items-center rounded-xl transition-all duration-300 group relative overflow-hidden cursor-pointer
-              ${expanded ? "bg-green-400/70 hover:bg-green-400 text-slate-900 px-4 py-3" : "bg-transparent hover:bg-slate-800 text-green-500 p-3 justify-center"}
-            `}
+            {/* --- FUNCTIONAL CHECK IN BUTTON --- */}
+            <TooltipWrapper
+              label={isCheckedIn ? "Clock Out" : "Check In"}
+              expanded={isExpandedVisual}
             >
-              <LogIn size={20} className="relative z-10" />
-              <span
-                className={`font-bold whitespace-nowrap ml-3 transition-all duration-300 relative z-10 ${expanded ? "w-auto opacity-100 font-bold" : "w-0 opacity-0 hidden"}`}
+              <button
+                onClick={handleClockAction}
+                className={`
+                w-full flex items-center rounded-xl transition-all duration-300 group relative overflow-hidden cursor-pointer
+                ${
+                  isCheckedIn
+                    ? "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20" // Red when clocked in
+                    : "bg-green-500 hover:bg-green-600 text-white shadow-green-500/20" // Green when clocked out
+                }
+                ${isExpandedVisual ? "px-4 py-3" : "p-3 justify-center"}
+              `}
               >
-                Check In
-              </span>
-              {/* Subtle inner glow for collapsed state */}
-              {!expanded && (
-                <div className="absolute inset-0 bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-              )}
-            </button>
+                {isCheckedIn ? (
+                  <Timer size={20} className="relative z-10 animate-pulse" />
+                ) : (
+                  <LogIn size={20} className="relative z-10" />
+                )}
+
+                <span
+                  className={`font-bold whitespace-nowrap ml-3 transition-all duration-300 relative z-10 ${
+                    isExpandedVisual
+                      ? "w-auto opacity-100 font-bold"
+                      : "w-0 opacity-0 hidden"
+                  }`}
+                >
+                  {isCheckedIn ? "Clock Out" : "Check In"}
+                </span>
+
+                {!isExpandedVisual && (
+                  <div
+                    className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity ${
+                      isCheckedIn ? "bg-red-500/10" : "bg-green-500/10"
+                    }`}
+                  />
+                )}
+              </button>
+            </TooltipWrapper>
 
             {/* Logout Button */}
-            <button
-              className={`
-              flex items-center rounded-xl transition-all duration-300 group cursor-pointer text-stone-950
-              ${expanded ? "bg-white hover:bg-red-500 text-slate-300  px-4 py-3" : "bg-transparent hover:bg-slate-800 text-slate-400 hover:text-red-400 p-3 justify-center"}
-            `}
-            >
-              <LogOut size={20} />
-              <span
-                className={` whitespace-nowrap ml-3 transition-all duration-300 font-bold ${expanded ? "w-auto opacity-100" : "w-0 opacity-0 hidden"}`}
+            <TooltipWrapper label="Logout" expanded={isExpandedVisual}>
+              <button
+                className={`
+                w-full flex items-center rounded-xl transition-all duration-300 group cursor-pointer
+                ${
+                  isExpandedVisual
+                    ? "bg-white dark:bg-slate-800 border border-slate-200 dark:border-transparent hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 px-4 py-3"
+                    : "bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 p-3 justify-center"
+                }
+              `}
               >
-                Logout
-              </span>
-            </button>
+                <LogOut size={20} />
+                <span
+                  className={` whitespace-nowrap ml-3 transition-all duration-300 font-bold ${
+                    isExpandedVisual
+                      ? "w-auto opacity-100"
+                      : "w-0 opacity-0 hidden"
+                  }`}
+                >
+                  Logout
+                </span>
+              </button>
+            </TooltipWrapper>
           </div>
 
           {/* User Profile */}
           <div
-            className={`flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800/50 transition-colors cursor-pointer ${expanded ? "" : "justify-center"}`}
+            className={`flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${
+              isExpandedVisual ? "" : "justify-center"
+            }`}
           >
             <div className="relative">
               <img
                 src="/profile.png"
-                className="w-9 h-9 rounded-full border border-slate-600 bg-slate-800 object-cover"
+                className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 object-cover"
                 alt="User"
               />
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-slate-950 rounded-full"></span>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-slate-950 rounded-full"></span>
             </div>
             <div
-              className={`flex flex-col overflow-hidden transition-all duration-300 ${expanded ? "w-32 ml-1" : "w-0 opacity-0 hidden"}`}
+              className={`flex flex-col overflow-hidden transition-all duration-300 ${
+                isExpandedVisual ? "w-32 ml-1" : "w-0 opacity-0 hidden"
+              }`}
             >
-              <span className="text-sm font-semibold text-white truncate">
+              <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                 John Doe
               </span>
-              <span className="text-xs text-slate-500 truncate">
+              <span className="text-xs text-slate-500 dark:text-slate-500 truncate">
                 Software Eng.
               </span>
             </div>
-            {expanded && (
-              <MoreVertical size={16} className="text-slate-500 ml-auto" />
-            )}
+            {isExpandedVisual && <ThemeToggleBtn />}
           </div>
+
+          {/* Collapsed Theme Toggle */}
+          {!isExpandedVisual && (
+            <div className="mt-2 flex justify-center">
+              <TooltipWrapper label="Switch Theme" expanded={isExpandedVisual}>
+                <ThemeToggleBtn />
+              </TooltipWrapper>
+            </div>
+          )}
         </div>
       </aside>
     </>
   );
 };
 
-// --- Helper Component for Nav Links ---
-interface SidebarItemProps {
-  item: NavItem;
+// --- Theme Toggle Component ---
+const ThemeToggleBtn = () => {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      className="relative p-2 rounded-lg transition-all duration-300 hover:bg-slate-800 text-slate-400 hover:text-yellow-400"
+    >
+      {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+    </button>
+  );
+};
+
+// --- Reusable Tooltip Wrapper Component ---
+interface TooltipWrapperProps {
+  children: React.ReactNode;
+  label: string;
   expanded: boolean;
-  setMobileOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({
-  item,
+const TooltipWrapper: React.FC<TooltipWrapperProps> = ({
+  children,
+  label,
   expanded,
-  setMobileOpen,
 }) => {
+  const [hovered, setHovered] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+  const ref = useRef<HTMLDivElement>(null);
+
+  const handleMouseEnter = () => {
+    if (!expanded && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setTooltipPos({
+        top: rect.top + rect.height / 2, // Center vertically
+        left: rect.right + 10, // 10px to the right of the item
+      });
+      setHovered(true);
+    }
+  };
+
+  const handleMouseLeave = () => setHovered(false);
+
   return (
-    <NavLink
-      to={item.to}
-      onClick={() => setMobileOpen(false)}
-      className={({ isActive }) => `
-        group relative flex items-center p-3 rounded-xl transition-all duration-300 ease-in-out hover:scale-120 hover:ml-5 hover:font-extrabold
-        ${
-          isActive
-            ? "bg-linear-to-r from-green-600/20 to-emerald-600/10 text-green-400 shadow-[inset_3px_0_0_0_#4ade80]" // The 'Cyber' Active State
-            : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
-        }
-        ${expanded ? "" : "justify-center"}
-      `}
-    >
-      <div className="transition-transform duration-300 group-hover:scale-110">
-        {item.icon}
+    <>
+      <div
+        ref={ref}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="w-full"
+      >
+        {children}
       </div>
 
-      <span
-        className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${expanded ? "w-40 ml-3 opacity-100" : "w-0 opacity-0"}`}
-      >
-        {item.label}
-      </span>
-
-      {/* Floating Tooltip (Visible only when collapsed) */}
-      {!expanded && (
-        <div
-          className={`
-          absolute left-full rounded-md px-2 py-1 ml-6
-          bg-slate-800 text-green-400 text-xs font-bold
-          invisible opacity-20 -translate-x-3 transition-all
-          group-hover:visible group-hover:opacity-100 group-hover:translate-x-0
-          z-50 shadow-lg border border-slate-700 whitespace-nowrap
-        `}
-        >
-          {item.label}
-        </div>
-      )}
-    </NavLink>
+      {/* PORTAL TOOLTIP */}
+      {!expanded &&
+        hovered &&
+        createPortal(
+          <div
+            style={{
+              top: `${tooltipPos.top}px`,
+              left: `${tooltipPos.left}px`,
+            }}
+            className="fixed z-[9999] px-3 py-1.5 text-xs font-bold text-green-400 bg-slate-900 border border-slate-700 rounded-md shadow-xl -translate-y-1/2 pointer-events-none animate-in fade-in duration-200 whitespace-nowrap"
+          >
+            {label}
+            {/* Small Arrow pointing left */}
+            <div className="absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 w-2 h-2 bg-slate-900 border-l border-b border-slate-700 rotate-45"></div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 };
 
