@@ -1,17 +1,14 @@
-
 import React, { useState, useEffect } from "react";
 import { useNotification } from "../../components/NotificationProvider";
-import { format, differenceInDays, parseISO } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import {
-  Calendar as CalendarIcon,
   Clock,
   FileText,
   CheckCircle2,
   XCircle,
   Briefcase,
   Plane,
-  Stethoscope,
-  X
+  Stethoscope
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -242,7 +239,7 @@ const ApplyLeave: React.FC = () => {
                                     value={formData.startDate ? format(formData.startDate, 'yyyy-MM-dd') : ''}
                                     onChange={(e) => handleDateChange('startDate', e.target.value)}
                                     // 'dark:[color-scheme:dark]' forces the calendar popup to be dark in dark mode
-                                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:[color-scheme:dark]"
+                                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:scheme-dark"
                                 />
                             </div>
 
@@ -255,7 +252,7 @@ const ApplyLeave: React.FC = () => {
                                     value={formData.endDate ? format(formData.endDate, 'yyyy-MM-dd') : ''}
                                     min={formData.startDate ? format(formData.startDate, 'yyyy-MM-dd') : ''}
                                     onChange={(e) => handleDateChange('endDate', e.target.value)}
-                                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:[color-scheme:dark]"
+                                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:scheme-dark"
                                 />
                             </div>
                         </div>

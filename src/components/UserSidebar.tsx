@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   Home,
   CheckSquare,
@@ -16,8 +16,10 @@ import {
   Sun,
   Moon,
   Timer,
+  Wallet,
 } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
+import { useUser } from "./UserProvider";
 
 // --- Configuration ---
 const logo = "/logo.png";
@@ -43,10 +45,13 @@ const navItems: NavItem[] = [
     icon: <CalendarCheck size={20} />,
   },
   { label: "Chats", to: "/user/chats", icon: <MessageSquare size={20} /> },
+  { label: "Payroll", to: "/user/payroll", icon: <Wallet size={20} /> },
   { label: "Apply Leave", to: "/user/leave", icon: <FileText size={20} /> },
 ];
 
 const UserSidebar: React.FC = () => {
+  const { user } = useUser();
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -138,9 +143,8 @@ const UserSidebar: React.FC = () => {
             <img
               src={isExpandedVisual ? logo : mobileLogo}
               alt="Logo"
-              className={`object-contain transition-all duration-300 ${
-                isExpandedVisual ? "w-full h-10" : "w-8 h-8 mx-auto"
-              }`}
+              className={`object-contain transition-all duration-300 ${isExpandedVisual ? "w-full h-10" : "w-8 h-8 mx-auto"
+                }`}
             />
           </div>
 
@@ -166,10 +170,9 @@ const UserSidebar: React.FC = () => {
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) => `
                   group relative flex items-center p-3 rounded-xl transition-all duration-300 ease-in-out hover:scale-105 hover:ml-2 hover:font-bold
-                  ${
-                    isActive
-                      ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-transparent"
-                      : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200"
+                  ${isActive
+                    ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-transparent"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200"
                   }
                   ${isExpandedVisual ? "" : "justify-center"}
                 `}
@@ -178,11 +181,10 @@ const UserSidebar: React.FC = () => {
                   {item.icon}
                 </div>
                 <span
-                  className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
-                    isExpandedVisual
+                  className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${isExpandedVisual
                       ? "w-40 ml-3 opacity-100"
                       : "w-0 opacity-0 hidden"
-                  }`}
+                    }`}
                 >
                   {item.label}
                 </span>
@@ -203,11 +205,10 @@ const UserSidebar: React.FC = () => {
                 onClick={handleClockAction}
                 className={`
                 w-full flex items-center rounded-xl transition-all duration-300 group relative overflow-hidden cursor-pointer
-                ${
-                  isCheckedIn
+                ${isCheckedIn
                     ? "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20" // Red when clocked in
                     : "bg-green-500 hover:bg-green-600 text-white shadow-green-500/20" // Green when clocked out
-                }
+                  }
                 ${isExpandedVisual ? "px-4 py-3" : "p-3 justify-center"}
               `}
               >
@@ -218,20 +219,18 @@ const UserSidebar: React.FC = () => {
                 )}
 
                 <span
-                  className={`font-bold whitespace-nowrap ml-3 transition-all duration-300 relative z-10 ${
-                    isExpandedVisual
+                  className={`font-bold whitespace-nowrap ml-3 transition-all duration-300 relative z-10 ${isExpandedVisual
                       ? "w-auto opacity-100 font-bold"
                       : "w-0 opacity-0 hidden"
-                  }`}
+                    }`}
                 >
                   {isCheckedIn ? "Clock Out" : "Check In"}
                 </span>
 
                 {!isExpandedVisual && (
                   <div
-                    className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity ${
-                      isCheckedIn ? "bg-red-500/10" : "bg-green-500/10"
-                    }`}
+                    className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity ${isCheckedIn ? "bg-red-500/10" : "bg-green-500/10"
+                      }`}
                   />
                 )}
               </button>
@@ -242,20 +241,18 @@ const UserSidebar: React.FC = () => {
               <button
                 className={`
                 w-full flex items-center rounded-xl transition-all duration-300 group cursor-pointer
-                ${
-                  isExpandedVisual
+                ${isExpandedVisual
                     ? "bg-white dark:bg-slate-800 border border-slate-200 dark:border-transparent hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 px-4 py-3"
                     : "bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 p-3 justify-center"
-                }
+                  }
               `}
               >
                 <LogOut size={20} />
                 <span
-                  className={` whitespace-nowrap ml-3 transition-all duration-300 font-bold ${
-                    isExpandedVisual
+                  className={` whitespace-nowrap ml-3 transition-all duration-300 font-bold ${isExpandedVisual
                       ? "w-auto opacity-100"
                       : "w-0 opacity-0 hidden"
-                  }`}
+                    }`}
                 >
                   Logout
                 </span>
@@ -263,33 +260,37 @@ const UserSidebar: React.FC = () => {
             </TooltipWrapper>
           </div>
 
+
           {/* User Profile */}
           <div
-            className={`flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${
-              isExpandedVisual ? "" : "justify-center"
-            }`}
+            onClick={() => navigate('/user/settings')}
+            className={`flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${isExpandedVisual ? "" : "justify-center"
+              }`}
           >
             <div className="relative">
               <img
-                src="/profile.png"
+                src={user.avatar}
                 className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 object-cover"
                 alt="User"
               />
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-slate-950 rounded-full"></span>
             </div>
             <div
-              className={`flex flex-col overflow-hidden transition-all duration-300 ${
-                isExpandedVisual ? "w-32 ml-1" : "w-0 opacity-0 hidden"
-              }`}
+              className={`flex flex-col overflow-hidden transition-all duration-300 ${isExpandedVisual ? "w-32 ml-1" : "w-0 opacity-0 hidden"
+                }`}
             >
               <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                John Doe
+                {user.name}
               </span>
               <span className="text-xs text-slate-500 dark:text-slate-500 truncate">
-                Software Eng.
+                {user.role}
               </span>
             </div>
-            {isExpandedVisual && <ThemeToggleBtn />}
+            {isExpandedVisual && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <ThemeToggleBtn />
+              </div>
+            )}
           </div>
 
           {/* Collapsed Theme Toggle */}

@@ -1,6 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Menbere:wght@100..700&display=swap');
 @import "tailwindcss";
 @config "../tailwind.config.js";
-@import url('https://fonts.googleapis.com/css2?family=Menbere:wght@100..700&display=swap');
 :root {
   --font-menbere: "Menbere", sans-serif;
 }

@@ -100,7 +100,7 @@ const Tasks = () => {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { showSuccess, showError } = useNotification();
+  const { showSuccess } = useNotification();
 
   // --- Filter States ---
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
